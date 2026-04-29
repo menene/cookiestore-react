@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom"
 import { useCart } from "@/context/CartContext"
-import { cookies } from "@/data/cookies"
+import { useFetchCookies } from "@/hooks/useFetchCookies"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ShoppingCart } from "lucide-react"
 
@@ -11,13 +11,29 @@ const etiquetaEstilos = {
   Fresca:     "border-emerald-200 bg-emerald-50 text-emerald-700",
 }
 
-// DetalleCookie ya no recibe agregarAlCarrito como prop.
-// Lo obtiene directamente del contexto con useCart().
-// Compara con la rama 02-router: ya no hay { agregarAlCarrito } en los parámetros.
+// useFetchCookies es reutilizable — no solo funciona en el catálogo.
+// Aquí lo usamos para obtener los datos de la galleta específica por ID.
 function DetalleCookie() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { agregarAlCarrito } = useCart()
+  const { cookies, loading } = useFetchCookies()
+
+  // Mientras cargan los datos mostramos un skeleton
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="max-w-xl animate-pulse space-y-4">
+          <div className="h-4 bg-muted rounded w-32" />
+          <div className="w-28 h-28 rounded-3xl bg-muted" />
+          <div className="h-3 bg-muted rounded w-20" />
+          <div className="h-8 bg-muted rounded w-64" />
+          <div className="h-3 bg-muted rounded w-full" />
+          <div className="h-3 bg-muted rounded w-5/6" />
+        </div>
+      </div>
+    )
+  }
 
   const cookie = cookies.find((c) => c.id === parseInt(id))
 

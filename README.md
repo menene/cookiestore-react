@@ -1,94 +1,98 @@
-# Rama 03-context — Rescatando el Carrito con Context API
+# Rama 04-hooks — Datos Reales y Ciclo de Vida
 
-Esta rama construye directamente sobre el código de `02-router`. Se extrae el estado del carrito a un `CartContext` global, eliminando por completo el Prop Drilling que se introdujo en la rama anterior.
+Esta rama construye directamente sobre el código de `03-context`. Los datos del catálogo dejan de estar hardcodeados en el código y pasan a cargarse desde una API real. Se agrega un buscador con auto-focus para demostrar el acceso directo al DOM.
 
 ---
 
 ## 🎯 Objetivo de esta rama
 
-En `02-router`, `agregarAlCarrito` y `carrito` tenían que pasarse como props a cada componente de ruta. Aquí los envolvemos en un contexto para que cualquier componente en el árbol pueda acceder a ellos directamente, sin intermediarios.
+Simular el flujo real de una aplicación: los datos llegan de forma asíncrona desde un servidor. Al hacerlo aparecen nuevos problemas — ¿cuándo se hace el fetch? ¿qué se muestra mientras carga? ¿cómo se optimiza el buscador?
 
 ---
 
 ## 🧠 Conceptos introducidos
 
-### `createContext`
-Crea el objeto de contexto. Es el "canal" por el que fluirán los datos.
+### `useEffect`
+Ejecuta código como efecto secundario del ciclo de vida del componente. Con un array de dependencias vacío `[]`, se ejecuta **una sola vez** al montar.
 
 ```jsx
-const CartContext = createContext(null)
+useEffect(() => {
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(data => setCookies(data))
+}, []) // <- solo al montar
 ```
 
-### `<Provider>`
-Componente que envuelve la app y pone el valor del contexto a disposición de todos sus descendientes.
+Puedes ver la petición real en el **Network tab** del navegador.
+
+### `useRef`
+Crea una referencia mutable a un nodo del DOM. A diferencia de `useState`, cambiar `ref.current` **no provoca un re-render**.
 
 ```jsx
-<CartContext.Provider value={{ carrito, agregarAlCarrito }}>
-  {children}
-</CartContext.Provider>
+const inputRef = useRef(null)
+
+// Enfocamos el input cuando los datos terminan de cargar
+useEffect(() => {
+  if (!loading && inputRef.current) {
+    inputRef.current.focus()
+  }
+}, [loading])
+
+// Conectamos la ref al elemento del DOM
+<input ref={inputRef} />
 ```
 
-### `useContext`
-Hook que permite a cualquier componente leer el valor del contexto más cercano.
+### Custom hook `useFetchCookies`
+Encapsula el fetch, el estado de carga y el manejo de errores en un hook reutilizable. Cualquier componente que necesite las galletas lo llama directamente.
 
 ```jsx
-const { carrito, agregarAlCarrito } = useContext(CartContext)
-```
+// src/hooks/useFetchCookies.js
+export function useFetchCookies() {
+  const [cookies, setCookies] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-### Custom hook `useCart`
-En lugar de llamar `useContext(CartContext)` en cada componente, exportamos un hook que encapsula esa lógica.
+  useEffect(() => { /* fetch */ }, [])
 
-```jsx
-export function useCart() {
-  return useContext(CartContext)
+  return { cookies, loading, error }
 }
 
 // Uso en cualquier componente:
-const { carrito, agregarAlCarrito } = useCart()
+const { cookies, loading, error } = useFetchCookies()
 ```
 
----
+### `useDebounce`
+Retrasa la actualización de un valor hasta que el usuario deja de cambiarlo. Demuestra la **cleanup function** de `useEffect` — el concepto más importante que añade esta rama.
 
-## 🔄 Antes vs. Después
+```js
+export function useDebounce(value, delay = 300) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
 
-**Rama 02-router — con Prop Drilling:**
-```jsx
-// App.jsx
-<Route path="/" element={<Catalogo carrito={carrito} agregarAlCarrito={agregarAlCarrito} />} />
-<Route path="/galleta/:id" element={<DetalleCookie agregarAlCarrito={agregarAlCarrito} />} />
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer) // <- cleanup: cancela el timer anterior
+  }, [value, delay])
 
-// Navbar.jsx
-function Navbar({ cartCount }) { ... }
-
-// Cart.jsx
-function Cart({ items }) { ... }
-
-// CookieCard.jsx
-function CookieCard({ cookie, onAgregar }) { ... }
+  return debouncedValue
+}
 ```
 
-**Rama 03-context — con Context API:**
-```jsx
-// App.jsx
-<CartProvider>
-  <Route path="/" element={<Catalogo />} />
-  <Route path="/galleta/:id" element={<DetalleCookie />} />
-</CartProvider>
+Sin el `return () => clearTimeout(timer)`, cada tecla acumularía un timer sin limpiar (memory leak).
 
-// Navbar.jsx
-function Navbar() {
-  const { carrito } = useCart()
-}
+### `useLocalStorage`
+Reemplazo directo de `useState` que persiste el valor en `localStorage`. Demuestra `useEffect` con **dependencias**: el efecto re-corre cada vez que el valor cambia.
 
-// Cart.jsx
-function Cart() {
-  const { carrito } = useCart()
-}
+```js
+const [carrito, setCarrito] = useLocalStorage("cookiestore-carrito", [])
+// El carrito sobrevive recargas de página — pruébalo añadiendo galletas y recargando.
+```
 
-// CookieCard.jsx
-function CookieCard({ cookie }) {
-  const { agregarAlCarrito } = useCart()
-}
+### Filtrado client-side
+El buscador **no genera peticiones adicionales**. Una vez cargados los datos, el filtrado ocurre en memoria con `.filter()`.
+
+```
+Carga inicial → useEffect → fetch(API) → setCookies(data)   ← 1 petición real
+Búsqueda      → useState  → cookies.filter(...)             ← 0 peticiones
 ```
 
 ---
@@ -97,17 +101,32 @@ function CookieCard({ cookie }) {
 
 ```
 src/
-├── App.jsx                     ← envuelto en <CartProvider>, sin props a las rutas
-├── context/
-│   └── CartContext.jsx         ← createContext, CartProvider, useCart
+├── hooks/
+│   ├── useFetchCookies.js   ← useEffect + fetch + VITE_API_URL
+│   ├── useDebounce.js       ← useEffect con cleanup function
+│   └── useLocalStorage.js   ← useEffect con dependencias
 ├── pages/
-│   ├── Catalogo.jsx            ← sin props de carrito
-│   └── DetalleCookie.jsx       ← usa useCart() directamente
-└── components/
-    ├── Navbar.jsx               ← usa useCart() directamente
-    ├── Cart.jsx                 ← usa useCart() directamente
-    └── CookieCard.jsx           ← usa useCart() directamente
+│   ├── Catalogo.jsx         ← useFetchCookies + useState (buscador) + useRef (focus)
+│   └── DetalleCookie.jsx    ← reutiliza useFetchCookies
+└── data/
+    └── cookies.js           ← vacío, los datos ahora vienen de la API
 ```
+
+---
+
+## ⚙️ Variables de entorno
+
+Copia el archivo de ejemplo y completa la URL de la API:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Descripción |
+|---|---|
+| `VITE_API_URL` | URL del JSON con el catálogo de galletas |
+
+Vite expone las variables con prefijo `VITE_` al navegador a través de `import.meta.env`.
 
 ---
 
@@ -119,3 +138,5 @@ docker compose up --build
 ```
 
 La aplicación estará disponible en `http://localhost:5173`.
+
+Abre el **Network tab** en las DevTools del navegador y recarga la página. Verás la petición GET al catálogo de galletas.
