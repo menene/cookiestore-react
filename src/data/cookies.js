@@ -1,0 +1,68 @@
+// Array estático de galletas — la "base de datos" de esta rama.
+// En la rama 04-hooks esto se moverá a un archivo JSON y se cargará con useEffect.
+export const cookies = [
+  {
+    id: 1,
+    nombre: "Chocolate Chip Clásica",
+    descripcion: "Masa suave y esponjosa con chips de chocolate belga 70% cacao.",
+    precio: 2.50,
+    emoji: "🍪",
+    etiqueta: "Clásica",
+  },
+  {
+    id: 2,
+    nombre: "Red Velvet",
+    descripcion: "Terciopelo rojo con centro cremoso de queso Philadelphia.",
+    precio: 3.25,
+    emoji: "❤️",
+    etiqueta: "Especial",
+  },
+  {
+    id: 3,
+    nombre: "Snickerdoodle",
+    descripcion: "Masa suave rebozada en canela y azúcar cristal dorado.",
+    precio: 2.75,
+    emoji: "✨",
+    etiqueta: "Clásica",
+  },
+  {
+    id: 4,
+    nombre: "Double Chocolate",
+    descripcion: "Masa de cacao oscuro con chips de chocolate blanco belga.",
+    precio: 3.50,
+    emoji: "🖤",
+    etiqueta: "Indulgente",
+  },
+  {
+    id: 5,
+    nombre: "Limón Glaseado",
+    descripcion: "Cítrico y fresco con glaseado de limón Meyer y ralladura.",
+    precio: 2.75,
+    emoji: "🍋",
+    etiqueta: "Fresca",
+  },
+  {
+    id: 6,
+    nombre: "Mantequilla de Maní",
+    descripcion: "Suave y cremosa con trozos de maní tostado caramelizado.",
+    precio: 3.00,
+    emoji: "🥜",
+    etiqueta: "Especial",
+  },
+  {
+    id: 7,
+    nombre: "Avena y Pasas",
+    descripcion: "Con pasas sultanas y canela de Ceilán, receta de abuela.",
+    precio: 2.25,
+    emoji: "🌾",
+    etiqueta: "Clásica",
+  },
+  {
+    id: 8,
+    nombre: "Oreo & Crema",
+    descripcion: "Masa de vainilla con trozos de Oreo y crema batida.",
+    precio: 3.75,
+    emoji: "🌑",
+    etiqueta: "Indulgente",
+  },
+]

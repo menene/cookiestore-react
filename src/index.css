@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fondo: crema cálida #FFF1D3 */
+    --background: 39 100% 91%;
+    --foreground: 290 58% 26%;
+
+    /* Tarjetas: blanco puro */
+    --card: 0 0% 100%;
+    --card-foreground: 290 58% 26%;
+
+    /* Primario: rosa-magenta #CA5995 */
+    --primary: 328 52% 57%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secundario: salmón #FFB090 */
+    --secondary: 17 100% 78%;
+    --secondary-foreground: 290 58% 26%;
+
+    /* Silenciado */
+    --muted: 39 60% 86%;
+    --muted-foreground: 290 20% 52%;
+
+    /* Acento: salmón suave */
+    --accent: 17 100% 78%;
+    --accent-foreground: 290 58% 26%;
+
+    /* Destructivo */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Bordes e inputs */
+    --border: 290 20% 84%;
+    --input: 290 20% 84%;
+    --ring: 328 52% 57%;
+
+    --radius: 0.875rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+  }
+}
