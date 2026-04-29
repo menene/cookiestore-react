@@ -33,6 +33,7 @@ function CookieCard({ cookie }) {
           {/* Botón de favorito — dispatch TOGGLE_FAVORITE */}
           <button
             onClick={(e) => { e.stopPropagation(); toggleFavorito(cookie.id) }}
+            aria-label={favorito ? "Quitar de favoritas" : "Agregar a favoritas"}
             className={`absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center border transition-all duration-200 ${
               favorito
                 ? "bg-primary border-primary text-primary-foreground scale-110"
