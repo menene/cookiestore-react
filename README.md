@@ -1,99 +1,70 @@
-# Rama 04-hooks — Datos Reales y Ciclo de Vida
+# Rama 05-reducers — Lógica Compleja del Carrito
 
-Esta rama construye directamente sobre el código de `03-context`. Los datos del catálogo dejan de estar hardcodeados en el código y pasan a cargarse desde una API real. Se agrega un buscador con auto-focus para demostrar el acceso directo al DOM.
+Esta rama construye directamente sobre el código de `04-hooks`. El `CartContext` creció: ahora maneja cantidades, eliminación específica, vaciado y favoritos. Múltiples `useState` dispersos causarían bugs difíciles de rastrear — la solución es centralizar toda la lógica en un reducer.
 
 ---
 
 ## 🎯 Objetivo de esta rama
 
-Simular el flujo real de una aplicación: los datos llegan de forma asíncrona desde un servidor. Al hacerlo aparecen nuevos problemas — ¿cuándo se hace el fetch? ¿qué se muestra mientras carga? ¿cómo se optimiza el buscador?
+Reemplazar el `useState` del carrito por un `useReducer` con acciones explícitas. Cualquier cambio al estado pasa por una sola función pura, lo que hace el flujo predecible y fácil de depurar.
 
 ---
 
 ## 🧠 Conceptos introducidos
 
-### `useEffect`
-Ejecuta código como efecto secundario del ciclo de vida del componente. Con un array de dependencias vacío `[]`, se ejecuta **una sola vez** al montar.
+### `useReducer`
+Alternativa a `useState` para estado complejo. Recibe un reducer y un estado inicial, devuelve el estado actual y `dispatch`.
 
-```jsx
-useEffect(() => {
-  fetch(API_URL)
-    .then(res => res.json())
-    .then(data => setCookies(data))
-}, []) // <- solo al montar
+```js
+const [state, dispatch] = useReducer(cartReducer, initialState)
 ```
 
-Puedes ver la petición real en el **Network tab** del navegador.
+### El Reducer
+Función pura `(state, action) => newState`. Nunca muta el estado — siempre retorna un objeto nuevo.
 
-### `useRef`
-Crea una referencia mutable a un nodo del DOM. A diferencia de `useState`, cambiar `ref.current` **no provoca un re-render**.
-
-```jsx
-const inputRef = useRef(null)
-
-// Enfocamos el input cuando los datos terminan de cargar
-useEffect(() => {
-  if (!loading && inputRef.current) {
-    inputRef.current.focus()
+```js
+function cartReducer(state, action) {
+  switch (action.type) {
+    case "ADD_COOKIE": { ... }
+    case "REMOVE_COOKIE": { ... }
+    case "UPDATE_QUANTITY": { ... }
+    case "CLEAR_CART": { ... }
+    case "TOGGLE_FAVORITE": { ... }
+    default: return state
   }
-}, [loading])
-
-// Conectamos la ref al elemento del DOM
-<input ref={inputRef} />
-```
-
-### Custom hook `useFetchCookies`
-Encapsula el fetch, el estado de carga y el manejo de errores en un hook reutilizable. Cualquier componente que necesite las galletas lo llama directamente.
-
-```jsx
-// src/hooks/useFetchCookies.js
-export function useFetchCookies() {
-  const [cookies, setCookies] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => { /* fetch */ }, [])
-
-  return { cookies, loading, error }
-}
-
-// Uso en cualquier componente:
-const { cookies, loading, error } = useFetchCookies()
-```
-
-### `useDebounce`
-Retrasa la actualización de un valor hasta que el usuario deja de cambiarlo. Demuestra la **cleanup function** de `useEffect` — el concepto más importante que añade esta rama.
-
-```js
-export function useDebounce(value, delay = 300) {
-  const [debouncedValue, setDebouncedValue] = useState(value)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay)
-    return () => clearTimeout(timer) // <- cleanup: cancela el timer anterior
-  }, [value, delay])
-
-  return debouncedValue
 }
 ```
 
-Sin el `return () => clearTimeout(timer)`, cada tecla acumularía un timer sin limpiar (memory leak).
-
-### `useLocalStorage`
-Reemplazo directo de `useState` que persiste el valor en `localStorage`. Demuestra `useEffect` con **dependencias**: el efecto re-corre cada vez que el valor cambia.
+### `dispatch`
+La única forma de modificar el estado. Se llama con un objeto `action` que tiene `type` y opcionalmente `payload`.
 
 ```js
-const [carrito, setCarrito] = useLocalStorage("cookiestore-carrito", [])
-// El carrito sobrevive recargas de página — pruébalo añadiendo galletas y recargando.
+dispatch({ type: "ADD_COOKIE",      payload: cookie })
+dispatch({ type: "REMOVE_COOKIE",   payload: id })
+dispatch({ type: "UPDATE_QUANTITY", payload: { id, cantidad: 3 } })
+dispatch({ type: "CLEAR_CART" })
+dispatch({ type: "TOGGLE_FAVORITE", payload: id })
 ```
 
-### Filtrado client-side
-El buscador **no genera peticiones adicionales**. Una vez cargados los datos, el filtrado ocurre en memoria con `.filter()`.
+### Funciones semánticas
+Los componentes no llaman `dispatch` directamente — usan funciones con nombres claros que lo envuelven internamente.
 
+```js
+const agregarAlCarrito   = (cookie) => dispatch({ type: "ADD_COOKIE", payload: cookie })
+const eliminarDelCarrito = (id)     => dispatch({ type: "REMOVE_COOKIE", payload: id })
+const actualizarCantidad = (id, n)  => dispatch({ type: "UPDATE_QUANTITY", payload: { id, cantidad: n } })
+const vaciarCarrito      = ()       => dispatch({ type: "CLEAR_CART" })
+const toggleFavorito     = (id)     => dispatch({ type: "TOGGLE_FAVORITE", payload: id })
 ```
-Carga inicial → useEffect → fetch(API) → setCookies(data)   ← 1 petición real
-Búsqueda      → useState  → cookies.filter(...)             ← 0 peticiones
-```
+
+---
+
+## ✨ Novedades en la UI
+
+- **Página `/cart`** — carrito dedicado con controles de cantidad por item
+- **Favoritos** — corazón en cada tarjeta, filtro "Favoritas" en el catálogo
+- **Badge en Navbar** — muestra el total de items (sumando cantidades)
+- **Items sin duplicados** — `ADD_COOKIE` incrementa la cantidad si el item ya existe
 
 ---
 
@@ -101,42 +72,25 @@ Búsqueda      → useState  → cookies.filter(...)             ← 0 peticione
 
 ```
 src/
-├── hooks/
-│   ├── useFetchCookies.js   ← useEffect + fetch + VITE_API_URL
-│   ├── useDebounce.js       ← useEffect con cleanup function
-│   └── useLocalStorage.js   ← useEffect con dependencias
+├── context/
+│   └── CartContext.jsx     ← useReducer, 5 acciones, persistencia en localStorage
 ├── pages/
-│   ├── Catalogo.jsx         ← useFetchCookies + useState (buscador) + useRef (focus)
-│   └── DetalleCookie.jsx    ← reutiliza useFetchCookies
-└── data/
-    └── cookies.js           ← vacío, los datos ahora vienen de la API
+│   ├── Catalogo.jsx        ← filtro de favoritas, grid ancho completo
+│   ├── CartPage.jsx        ← página dedicada del carrito (nueva)
+│   └── DetalleCookie.jsx   ← sin cambios
+└── components/
+    ├── CookieCard.jsx      ← botón de favorito (corazón)
+    └── Navbar.jsx          ← badge con totalItems, link a /cart
 ```
-
----
-
-## ⚙️ Variables de entorno
-
-Copia el archivo de ejemplo y completa la URL de la API:
-
-```bash
-cp .env.example .env
-```
-
-| Variable | Descripción |
-|---|---|
-| `VITE_API_URL` | URL del JSON con el catálogo de galletas |
-
-Vite expone las variables con prefijo `VITE_` al navegador a través de `import.meta.env`.
 
 ---
 
 ## 🚀 Cómo ejecutar
 
 ```bash
+cp .env.example .env
 cp docker-compose.example.yml docker-compose.yml
 docker compose up --build
 ```
 
 La aplicación estará disponible en `http://localhost:5173`.
-
-Abre el **Network tab** en las DevTools del navegador y recarga la página. Verás la petición GET al catálogo de galletas.

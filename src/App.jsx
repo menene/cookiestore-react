@@ -3,14 +3,8 @@ import { CartProvider } from "@/context/CartContext"
 import Navbar from "@/components/Navbar"
 import Catalogo from "@/pages/Catalogo"
 import DetalleCookie from "@/pages/DetalleCookie"
+import CartPage from "@/pages/CartPage"
 
-// Compara este App con el de la rama 02-router:
-//   - Ya no hay useState aquí
-//   - Ya no hay agregarAlCarrito aquí
-//   - Ya no se pasa NINGUNA prop a las rutas
-//
-// El estado del carrito vive en CartProvider. Cualquier componente
-// dentro del Provider puede leerlo o modificarlo con useCart().
 function App() {
   return (
     <CartProvider>
@@ -20,6 +14,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Catalogo />} />
             <Route path="/galleta/:id" element={<DetalleCookie />} />
+            <Route path="/cart" element={<CartPage />} />
           </Routes>
         </div>
       </BrowserRouter>
