@@ -1,46 +1,29 @@
-import { useState } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { CartProvider } from "@/context/CartContext"
 import Navbar from "@/components/Navbar"
 import Catalogo from "@/pages/Catalogo"
 import DetalleCookie from "@/pages/DetalleCookie"
 
-// App sigue siendo el dueño del estado del carrito.
-// El problema ahora es doble: necesitamos pasar TANTO agregarAlCarrito
-// COMO el array carrito a las páginas que los necesiten.
-// Cada prop extra que añadimos es un nivel más de prop drilling.
+// Compara este App con el de la rama 02-router:
+//   - Ya no hay useState aquí
+//   - Ya no hay agregarAlCarrito aquí
+//   - Ya no se pasa NINGUNA prop a las rutas
+//
+// El estado del carrito vive en CartProvider. Cualquier componente
+// dentro del Provider puede leerlo o modificarlo con useCart().
 function App() {
-  const [carrito, setCarrito] = useState([])
-
-  const agregarAlCarrito = (cookie) => {
-    setCarrito([...carrito, cookie])
-  }
-
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-background">
-
-        {/* Navbar persiste en todas las rutas */}
-        <Navbar cartCount={carrito.length} />
-
-        <Routes>
-          {/* Catalogo recibe tanto carrito como agregarAlCarrito — más prop drilling */}
-          <Route
-            path="/"
-            element={
-              <Catalogo
-                carrito={carrito}
-                agregarAlCarrito={agregarAlCarrito}
-              />
-            }
-          />
-          <Route
-            path="/galleta/:id"
-            element={<DetalleCookie agregarAlCarrito={agregarAlCarrito} />}
-          />
-        </Routes>
-
-      </div>
-    </BrowserRouter>
+    <CartProvider>
+      <BrowserRouter>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<Catalogo />} />
+            <Route path="/galleta/:id" element={<DetalleCookie />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </CartProvider>
   )
 }
 

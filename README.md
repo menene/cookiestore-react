@@ -1,69 +1,95 @@
-# Rama 02-router — Navegación y el Problema del Estado
+# Rama 03-context — Rescatando el Carrito con Context API
 
-Esta rama construye directamente sobre el código de `01-intro`. Se introduce React Router v6 para convertir la tienda en una aplicación de múltiples páginas, y se expone de forma deliberada el problema del **Prop Drilling**.
+Esta rama construye directamente sobre el código de `02-router`. Se extrae el estado del carrito a un `CartContext` global, eliminando por completo el Prop Drilling que se introdujo en la rama anterior.
 
 ---
 
 ## 🎯 Objetivo de esta rama
 
-Agregar navegación real a CookieStore: una página de catálogo y una página de detalle por galleta. Al hacerlo, el estado del carrito (que vive en `App`) necesita llegar a múltiples componentes de ruta, lo que obliga a perforar props hacia abajo nivel a nivel.
+En `02-router`, `agregarAlCarrito` y `carrito` tenían que pasarse como props a cada componente de ruta. Aquí los envolvemos en un contexto para que cualquier componente en el árbol pueda acceder a ellos directamente, sin intermediarios.
 
 ---
 
 ## 🧠 Conceptos introducidos
 
-### `<BrowserRouter>`, `<Routes>`, `<Route>`
-El sistema de enrutamiento de React Router v6. `BrowserRouter` habilita la navegación en toda la app. `Routes` contiene las rutas y `Route` mapea una URL a un componente.
+### `createContext`
+Crea el objeto de contexto. Es el "canal" por el que fluirán los datos.
 
 ```jsx
-<BrowserRouter>
-  <Routes>
-    <Route path="/" element={<Catalogo agregarAlCarrito={agregarAlCarrito} />} />
-    <Route path="/galleta/:id" element={<DetalleCookie agregarAlCarrito={agregarAlCarrito} />} />
-  </Routes>
-</BrowserRouter>
+const CartContext = createContext(null)
 ```
 
-### `useNavigate`
-Hook que devuelve una función para navegar programáticamente, sin necesidad de un `<Link>` en el JSX.
+### `<Provider>`
+Componente que envuelve la app y pone el valor del contexto a disposición de todos sus descendientes.
 
 ```jsx
-const navigate = useNavigate()
-navigate(`/galleta/${cookie.id}`)  // navega a la página de detalle
-navigate(-1)                        // regresa a la página anterior
+<CartContext.Provider value={{ carrito, agregarAlCarrito }}>
+  {children}
+</CartContext.Provider>
 ```
 
-### `useParams`
-Hook que extrae los parámetros dinámicos de la URL actual.
+### `useContext`
+Hook que permite a cualquier componente leer el valor del contexto más cercano.
 
 ```jsx
-// URL: /galleta/3
-const { id } = useParams()  // id === "3"
-const cookie = cookies.find(c => c.id === parseInt(id))
+const { carrito, agregarAlCarrito } = useContext(CartContext)
 ```
 
-### `<Link>`
-Componente de navegación declarativa. Reemplaza al `<a href>` tradicional para evitar recargas del navegador.
+### Custom hook `useCart`
+En lugar de llamar `useContext(CartContext)` en cada componente, exportamos un hook que encapsula esa lógica.
 
 ```jsx
-<Link to="/">Volver al catálogo</Link>
+export function useCart() {
+  return useContext(CartContext)
+}
+
+// Uso en cualquier componente:
+const { carrito, agregarAlCarrito } = useCart()
 ```
 
 ---
 
-## 😤 El problema: Prop Drilling
+## 🔄 Antes vs. Después
 
-El carrito sigue viviendo en `App`. Para que `Catalogo` y `DetalleCookie` puedan modificarlo, `agregarAlCarrito` debe pasarse como prop a cada componente de ruta:
+**Rama 02-router — con Prop Drilling:**
+```jsx
+// App.jsx
+<Route path="/" element={<Catalogo carrito={carrito} agregarAlCarrito={agregarAlCarrito} />} />
+<Route path="/galleta/:id" element={<DetalleCookie agregarAlCarrito={agregarAlCarrito} />} />
 
+// Navbar.jsx
+function Navbar({ cartCount }) { ... }
+
+// Cart.jsx
+function Cart({ items }) { ... }
+
+// CookieCard.jsx
+function CookieCard({ cookie, onAgregar }) { ... }
 ```
-App (dueño del estado)
- └── <Route element={<Catalogo agregarAlCarrito={fn} carrito={arr} />}>
- └── <Route element={<DetalleCookie agregarAlCarrito={fn} />}>
+
+**Rama 03-context — con Context API:**
+```jsx
+// App.jsx
+<CartProvider>
+  <Route path="/" element={<Catalogo />} />
+  <Route path="/galleta/:id" element={<DetalleCookie />} />
+</CartProvider>
+
+// Navbar.jsx
+function Navbar() {
+  const { carrito } = useCart()
+}
+
+// Cart.jsx
+function Cart() {
+  const { carrito } = useCart()
+}
+
+// CookieCard.jsx
+function CookieCard({ cookie }) {
+  const { agregarAlCarrito } = useCart()
+}
 ```
-
-Si `DetalleCookie` tuviera componentes hijos que también necesitaran la función, habría que seguir perforando hacia abajo. Eso se vuelve inmanejable rápidamente.
-
-**Este dolor es intencional.** En la rama `03-context` lo resolvemos extrayendo el estado del carrito a un `CartContext` global.
 
 ---
 
@@ -71,20 +97,21 @@ Si `DetalleCookie` tuviera componentes hijos que también necesitaran la funció
 
 ```
 src/
-├── App.jsx                  ← BrowserRouter, Routes, prop drilling
+├── App.jsx                     ← envuelto en <CartProvider>, sin props a las rutas
+├── context/
+│   └── CartContext.jsx         ← createContext, CartProvider, useCart
 ├── pages/
-│   ├── Catalogo.jsx         ← página principal, recibe carrito + agregarAlCarrito
-│   └── DetalleCookie.jsx    ← useParams, useNavigate, recibe agregarAlCarrito
+│   ├── Catalogo.jsx            ← sin props de carrito
+│   └── DetalleCookie.jsx       ← usa useCart() directamente
 └── components/
-    ├── Navbar.jsx            ← Link de navegación
-    └── CookieCard.jsx        ← useNavigate para ir al detalle
+    ├── Navbar.jsx               ← usa useCart() directamente
+    ├── Cart.jsx                 ← usa useCart() directamente
+    └── CookieCard.jsx           ← usa useCart() directamente
 ```
 
 ---
 
 ## 🚀 Cómo ejecutar
-
-Copia el archivo de ejemplo y levanta el contenedor:
 
 ```bash
 cp docker-compose.example.yml docker-compose.yml
