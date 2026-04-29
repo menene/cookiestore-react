@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar"
 import Catalogo from "@/pages/Catalogo"
 import DetalleCookie from "@/pages/DetalleCookie"
 import CartPage from "@/pages/CartPage"
+import CheckoutPage from "@/pages/CheckoutPage"
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
             <Route path="/" element={<Catalogo />} />
             <Route path="/galleta/:id" element={<DetalleCookie />} />
             <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
           </Routes>
         </div>
       </BrowserRouter>

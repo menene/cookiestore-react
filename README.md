@@ -1,70 +1,94 @@
-# Rama 05-reducers — Lógica Compleja del Carrito
+# Rama 06-forms — El Checkout y Validación
 
-Esta rama construye directamente sobre el código de `04-hooks`. El `CartContext` creció: ahora maneja cantidades, eliminación específica, vaciado y favoritos. Múltiples `useState` dispersos causarían bugs difíciles de rastrear — la solución es centralizar toda la lógica en un reducer.
+Esta rama construye directamente sobre el código de `05-reducers`. Se construye la página de checkout con un formulario complejo de envío y pago, introduciendo React Hook Form y Zod para manejar la validación de forma eficiente.
 
 ---
 
 ## 🎯 Objetivo de esta rama
 
-Reemplazar el `useState` del carrito por un `useReducer` con acciones explícitas. Cualquier cambio al estado pasa por una sola función pura, lo que hace el flujo predecible y fácil de depurar.
+Demostrar el problema de manejar formularios grandes con `useState` y resolverlo con React Hook Form. El punto clave: con `useState` el componente se re-renderiza en cada tecla; con React Hook Form, los inputs son **no controlados** por defecto y no generan re-renders mientras el usuario escribe.
 
 ---
 
 ## 🧠 Conceptos introducidos
 
-### `useReducer`
-Alternativa a `useState` para estado complejo. Recibe un reducer y un estado inicial, devuelve el estado actual y `dispatch`.
+### Componentes controlados vs no controlados
 
-```js
-const [state, dispatch] = useReducer(cartReducer, initialState)
+**Controlado** (`useState`) — React controla el valor del input en cada cambio:
+```jsx
+const [nombre, setNombre] = useState("")
+<input value={nombre} onChange={e => setNombre(e.target.value)} />
+// Re-render en cada tecla ↑
 ```
 
-### El Reducer
-Función pura `(state, action) => newState`. Nunca muta el estado — siempre retorna un objeto nuevo.
-
-```js
-function cartReducer(state, action) {
-  switch (action.type) {
-    case "ADD_COOKIE": { ... }
-    case "REMOVE_COOKIE": { ... }
-    case "UPDATE_QUANTITY": { ... }
-    case "CLEAR_CART": { ... }
-    case "TOGGLE_FAVORITE": { ... }
-    default: return state
-  }
-}
+**No controlado** (React Hook Form) — el DOM controla el valor, React solo lo lee al validar:
+```jsx
+<input {...register("nombre")} />
+// Sin re-renders mientras escribe ↑
 ```
 
-### `dispatch`
-La única forma de modificar el estado. Se llama con un objeto `action` que tiene `type` y opcionalmente `payload`.
+### `useForm` + `zodResolver`
+Inicializa el formulario conectando el esquema de Zod como validador.
 
-```js
-dispatch({ type: "ADD_COOKIE",      payload: cookie })
-dispatch({ type: "REMOVE_COOKIE",   payload: id })
-dispatch({ type: "UPDATE_QUANTITY", payload: { id, cantidad: 3 } })
-dispatch({ type: "CLEAR_CART" })
-dispatch({ type: "TOGGLE_FAVORITE", payload: id })
+```jsx
+const { register, handleSubmit, formState: { errors } } = useForm({
+  resolver: zodResolver(checkoutSchema),
+})
 ```
 
-### Funciones semánticas
-Los componentes no llaman `dispatch` directamente — usan funciones con nombres claros que lo envuelven internamente.
+### `register`
+Conecta un input al formulario. Devuelve las props necesarias (`name`, `ref`, `onChange`, `onBlur`).
+
+```jsx
+<input {...register("nombre")} />
+```
+
+### `handleSubmit`
+Envuelve el handler del formulario. Valida con Zod antes de ejecutarlo — si hay errores, el handler no se llama.
+
+```jsx
+<form onSubmit={handleSubmit(onSubmit)}>
+```
+
+### `formState.errors`
+Objeto con los errores de validación de cada campo. El mensaje viene del esquema Zod.
+
+```jsx
+{errors.nombre && <p>{errors.nombre.message}</p>}
+```
+
+### Esquema Zod
+Define la forma y las reglas del formulario como un objeto tipado y reutilizable.
 
 ```js
-const agregarAlCarrito   = (cookie) => dispatch({ type: "ADD_COOKIE", payload: cookie })
-const eliminarDelCarrito = (id)     => dispatch({ type: "REMOVE_COOKIE", payload: id })
-const actualizarCantidad = (id, n)  => dispatch({ type: "UPDATE_QUANTITY", payload: { id, cantidad: n } })
-const vaciarCarrito      = ()       => dispatch({ type: "CLEAR_CART" })
-const toggleFavorito     = (id)     => dispatch({ type: "TOGGLE_FAVORITE", payload: id })
+const checkoutSchema = z.object({
+  nombre:       z.string().min(2, "Al menos 2 caracteres"),
+  telefono:     z.string().regex(/^\d{8}$/, "Debe tener 8 dígitos"),
+  numeroTarjeta: z.string().regex(/^\d{16}$/, "16 dígitos sin espacios"),
+  vencimiento:  z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Formato MM/AA"),
+  cvv:          z.string().regex(/^\d{3,4}$/, "3 o 4 dígitos"),
+  // ...
+})
 ```
 
 ---
 
 ## ✨ Novedades en la UI
 
-- **Página `/cart`** — carrito dedicado con controles de cantidad por item
-- **Favoritos** — corazón en cada tarjeta, filtro "Favoritas" en el catálogo
-- **Badge en Navbar** — muestra el total de items (sumando cantidades)
-- **Items sin duplicados** — `ADD_COOKIE` incrementa la cantidad si el item ya existe
+- **Página `/checkout`** — dos secciones (envío y pago) + resumen del pedido
+- **Validación por campo** — el error aparece al salir del input o al intentar enviar
+- **Pantalla de confirmación** — tras el submit exitoso, vacía el carrito y muestra confirmación
+- **Botón "Ir al checkout"** en `/cart`
+
+---
+
+## 📦 Nuevas dependencias
+
+```bash
+react-hook-form
+zod
+@hookform/resolvers
+```
 
 ---
 
@@ -72,15 +96,10 @@ const toggleFavorito     = (id)     => dispatch({ type: "TOGGLE_FAVORITE", paylo
 
 ```
 src/
-├── context/
-│   └── CartContext.jsx     ← useReducer, 5 acciones, persistencia en localStorage
 ├── pages/
-│   ├── Catalogo.jsx        ← filtro de favoritas, grid ancho completo
-│   ├── CartPage.jsx        ← página dedicada del carrito (nueva)
-│   └── DetalleCookie.jsx   ← sin cambios
-└── components/
-    ├── CookieCard.jsx      ← botón de favorito (corazón)
-    └── Navbar.jsx          ← badge con totalItems, link a /cart
+│   ├── CheckoutPage.jsx   ← useForm, zodResolver, register, handleSubmit, errors
+│   └── CartPage.jsx       ← botón a /checkout
+└── App.jsx                ← ruta /checkout
 ```
 
 ---

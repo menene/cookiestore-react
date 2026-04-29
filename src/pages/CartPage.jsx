@@ -133,6 +133,13 @@ function CartPage() {
         </div>
       </div>
 
+      {/* Ir al checkout */}
+      <Button asChild size="lg" className="w-full">
+        <Link to="/checkout">
+          Ir al checkout — Q{total.toFixed(2)}
+        </Link>
+      </Button>
+
     </div>
   )
 }
