@@ -1,91 +1,94 @@
-# 🍪 CookieStore: Arquitectura Progresiva con React
+# Rama 02-router — Navegación y el Problema del Estado
 
-Este repositorio es un recorrido progresivo para entender cómo funciona una aplicación web escalable en React desde la base, construyendo una tienda en línea de galletas (CookieStore).
-
-El objetivo no es aprender un framework de memoria.
-
-El objetivo es entender el problema antes de usar la solución.
+Esta rama construye directamente sobre el código de `01-intro`. Se introduce React Router v6 para convertir la tienda en una aplicación de múltiples páginas, y se expone de forma deliberada el problema del **Prop Drilling**.
 
 ---
 
-## 🧠 Enfoque
+## 🎯 Objetivo de esta rama
 
-Comenzamos desde el nivel más bajo posible en React y vamos subiendo:
-
-* Catálogo estático y estado local básico
-* Múltiples páginas y el problema del prop drilling
-* Estado global nativo con Context API
-* Ciclo de vida y peticiones de datos simuladas
-* Manejo de estado complejo con Reducers
-* Formularios robustos y validación
-* Optimización de rendimiento y renders
-* Estado global escalable con Zustand
-
-El diseño visual utiliza **Tailwind CSS** y **shadcn/ui** desde la primera rama. La interfaz es consistente, limpia y profesional a lo largo de todo el recorrido — el foco pedagógico está en React, no en el CSS.
-
-Cada rama representa una capa adicional de abstracción y complejidad.
-
-La idea es poder moverse entre ramas y observar cómo evoluciona la arquitectura de la tienda al enfrentarse a problemas reales.
+Agregar navegación real a CookieStore: una página de catálogo y una página de detalle por galleta. Al hacerlo, el estado del carrito (que vive en `App`) necesita llegar a múltiples componentes de ruta, lo que obliga a perforar props hacia abajo nivel a nivel.
 
 ---
 
-## 🎯 Qué se busca lograr
+## 🧠 Conceptos introducidos
 
-Que el estudiante entienda:
+### `<BrowserRouter>`, `<Routes>`, `<Route>`
+El sistema de enrutamiento de React Router v6. `BrowserRouter` habilita la navegación en toda la app. `Routes` contiene las rutas y `Route` mapea una URL a un componente.
 
-* Qué resuelve realmente React en el navegador
-* Cómo funciona el flujo de datos unidireccional
-* El dolor de perder el estado al cambiar de ruta
-* Cómo y por qué se debe abstraer el estado global
-* El ciclo de vida de los datos desde que el componente se monta
-* Cómo centralizar lógica compleja de estado
-* Cómo manejar formularios sin sacrificar el rendimiento
-* Cuándo y cómo optimizar la aplicación evitando renders innecesarios
+```jsx
+<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Catalogo agregarAlCarrito={agregarAlCarrito} />} />
+    <Route path="/galleta/:id" element={<DetalleCookie agregarAlCarrito={agregarAlCarrito} />} />
+  </Routes>
+</BrowserRouter>
+```
+
+### `useNavigate`
+Hook que devuelve una función para navegar programáticamente, sin necesidad de un `<Link>` en el JSX.
+
+```jsx
+const navigate = useNavigate()
+navigate(`/galleta/${cookie.id}`)  // navega a la página de detalle
+navigate(-1)                        // regresa a la página anterior
+```
+
+### `useParams`
+Hook que extrae los parámetros dinámicos de la URL actual.
+
+```jsx
+// URL: /galleta/3
+const { id } = useParams()  // id === "3"
+const cookie = cookies.find(c => c.id === parseInt(id))
+```
+
+### `<Link>`
+Componente de navegación declarativa. Reemplaza al `<a href>` tradicional para evitar recargas del navegador.
+
+```jsx
+<Link to="/">Volver al catálogo</Link>
+```
 
 ---
 
-## 🎨 Diseño
+## 😤 El problema: Prop Drilling
 
-La UI está construida con **Tailwind CSS** y componentes de **shadcn/ui**. Esto permite una interfaz visualmente cuidada y coherente sin distraer al estudiante de los conceptos de React. Los componentes de shadcn/ui se agregan según se necesiten en cada rama.
+El carrito sigue viviendo en `App`. Para que `Catalogo` y `DetalleCookie` puedan modificarlo, `agregarAlCarrito` debe pasarse como prop a cada componente de ruta:
+
+```
+App (dueño del estado)
+ └── <Route element={<Catalogo agregarAlCarrito={fn} carrito={arr} />}>
+ └── <Route element={<DetalleCookie agregarAlCarrito={fn} />}>
+```
+
+Si `DetalleCookie` tuviera componentes hijos que también necesitaran la función, habría que seguir perforando hacia abajo. Eso se vuelve inmanejable rápidamente.
+
+**Este dolor es intencional.** En la rama `03-context` lo resolvemos extrayendo el estado del carrito a un `CartContext` global.
 
 ---
 
-## 💻 Entorno
+## 📁 Estructura relevante
 
-Todos los ejemplos están preparados para ejecutarse con Docker y Docker Compose.
+```
+src/
+├── App.jsx                  ← BrowserRouter, Routes, prop drilling
+├── pages/
+│   ├── Catalogo.jsx         ← página principal, recibe carrito + agregarAlCarrito
+│   └── DetalleCookie.jsx    ← useParams, useNavigate, recibe agregarAlCarrito
+└── components/
+    ├── Navbar.jsx            ← Link de navegación
+    └── CookieCard.jsx        ← useNavigate para ir al detalle
+```
 
-Cada rama contiene su propio `Dockerfile` y `docker-compose.yml`. Para levantar el proyecto en cualquier rama basta con:
+---
+
+## 🚀 Cómo ejecutar
+
+Copia el archivo de ejemplo y levanta el contenedor:
 
 ```bash
+cp docker-compose.example.yml docker-compose.yml
 docker compose up --build
 ```
 
-No es necesario tener Node instalado localmente. Cada rama construye sobre las dependencias de la anterior — Docker se encarga del entorno de forma consistente.
-
----
-
-## 📚 Ramas del repositorio
-
-**[01-intro](https://github.com/menene/cookiestore-react/tree/01-intro)**
-Catálogo estático y estado básico. Se construye la vista principal iterando un array de galletas y manejando un carrito de compras simple con `useState`.
-
-**[02-router](https://github.com/menene/cookiestore-react/tree/02-router)**
-Se introduce React Router v6. La tienda pasa a tener múltiples páginas, demostrando el problema de perder el estado del carrito al navegar y el infierno del prop drilling.
-
-**[03-context](https://github.com/menene/cookiestore-react/tree/03-context)**
-Se implementa Context API. Se extrae el estado del carrito a un `CartContext` global, resolviendo el problema de la rama anterior sin utilizar librerías de terceros.
-
-**[04-hooks](https://github.com/menene/cookiestore-react/tree/04-hooks)**
-Se simula el consumo de una API. Los datos pasan a un archivo JSON y se utiliza `useEffect` para cargarlos al montar el componente, junto con `useRef` para optimizar el buscador de galletas y un custom hook reutilizable.
-
-**[05-reducers](https://github.com/menene/cookiestore-react/tree/05-reducers)**
-Se refactoriza la lógica del carrito. Al crecer la complejidad (cantidades exactas, totales, eliminación específica), se reemplazan múltiples `useState` dispersos por un `useReducer` con acciones explícitas.
-
-**[06-forms](https://github.com/menene/cookiestore-react/tree/06-forms)**
-Se construye el flujo de Checkout. Se introduce React Hook Form y Zod para manejar un formulario complejo de dirección y pago, validando datos de manera estricta sin provocar renders en cada pulsación de tecla.
-
-**[07-performance](https://github.com/menene/cookiestore-react/tree/07-performance)**
-Se optimiza la aplicación. Se implementan técnicas de memoización (`React.memo`, `useMemo`, `useCallback`) y lazy loading con `React.lazy` y `Suspense` para evitar que todo el catálogo se vuelva a renderizar innecesariamente.
-
-**[08-zustand](https://github.com/menene/cookiestore-react/tree/08-zustand)**
-Se reemplaza Context API por Zustand. Se demuestra cómo una librería moderna de estado global reduce drásticamente el código repetitivo y mejora el rendimiento por defecto en aplicaciones que escalan.
+La aplicación estará disponible en `http://localhost:5173`.
