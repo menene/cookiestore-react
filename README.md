@@ -1,91 +1,103 @@
-# 🍪 CookieStore: Arquitectura Progresiva con React
+# Rama 01-intro — Catálogo Estático y Estado Local
 
-Este repositorio es un recorrido progresivo para entender cómo funciona una aplicación web escalable en React desde la base, construyendo una tienda en línea de galletas (CookieStore).
-
-El objetivo no es aprender un framework de memoria.
-
-El objetivo es entender el problema antes de usar la solución.
+Esta es la rama de partida del recorrido. Se construye la versión más simple posible de CookieStore: un catálogo de galletas con un carrito de compras básico, todo en un solo componente raíz usando `useState`.
 
 ---
 
-## 🧠 Enfoque
+## 🎯 Objetivo de esta rama
 
-Comenzamos desde el nivel más bajo posible en React y vamos subiendo:
-
-* Catálogo estático y estado local básico
-* Múltiples páginas y el problema del prop drilling
-* Estado global nativo con Context API
-* Ciclo de vida y peticiones de datos simuladas
-* Manejo de estado complejo con Reducers
-* Formularios robustos y validación
-* Optimización de rendimiento y renders
-* Estado global escalable con Zustand
-
-El diseño visual utiliza **Tailwind CSS** y **shadcn/ui** desde la primera rama. La interfaz es consistente, limpia y profesional a lo largo de todo el recorrido — el foco pedagógico está en React, no en el CSS.
-
-Cada rama representa una capa adicional de abstracción y complejidad.
-
-La idea es poder moverse entre ramas y observar cómo evoluciona la arquitectura de la tienda al enfrentarse a problemas reales.
+Construir la interfaz principal de la tienda desde cero. El catálogo muestra un array estático de galletas y el carrito acumula los items seleccionados. No hay rutas, no hay contexto global, no hay librerías de estado — solo React puro.
 
 ---
 
-## 🎯 Qué se busca lograr
+## 🧠 Conceptos introducidos
 
-Que el estudiante entienda:
+### `useState`
+Hook que permite a un componente recordar valores entre renders. Devuelve el valor actual y una función para actualizarlo.
 
-* Qué resuelve realmente React en el navegador
-* Cómo funciona el flujo de datos unidireccional
-* El dolor de perder el estado al cambiar de ruta
-* Cómo y por qué se debe abstraer el estado global
-* El ciclo de vida de los datos desde que el componente se monta
-* Cómo centralizar lógica compleja de estado
-* Cómo manejar formularios sin sacrificar el rendimiento
-* Cuándo y cómo optimizar la aplicación evitando renders innecesarios
+```jsx
+const [carrito, setCarrito] = useState([])
+```
+
+Cada vez que se llama a `setCarrito`, React vuelve a renderizar el componente con el nuevo valor.
+
+### Inmutabilidad del estado
+React detecta cambios comparando referencias. Por eso nunca se muta el array directamente — se crea uno nuevo con el spread operator:
+
+```jsx
+const agregarAlCarrito = (cookie) => {
+  setCarrito([...carrito, cookie])
+}
+```
+
+`push()` mutaría el array original y React no detectaría el cambio. El spread crea un nuevo array con todos los items anteriores más el nuevo.
+
+### `.map()` para renderizar listas
+Transforma cada objeto del array de galletas en un componente `CookieCard`. La prop `key` es obligatoria para que React identifique cada elemento de forma única.
+
+```jsx
+{cookies.map((cookie) => (
+  <CookieCard
+    key={cookie.id}
+    cookie={cookie}
+    onAgregar={agregarAlCarrito}
+  />
+))}
+```
+
+### Props: datos y funciones
+Los componentes hijos reciben información a través de props. En esta rama, `App` le pasa dos cosas a `CookieCard`:
+
+- `cookie` → el objeto con los datos de la galleta (nombre, precio, emoji, etc.)
+- `onAgregar` → la función que actualiza el carrito en `App`
+
+```jsx
+// CookieCard.jsx
+function CookieCard({ cookie, onAgregar }) {
+  return (
+    <Button onClick={() => onAgregar(cookie)}>Agregar</Button>
+  )
+}
+```
+
+El hijo no modifica el estado directamente — llama a la función del padre, que es quien tiene el estado.
+
+### `Array.reduce` para calcular el total
+El carrito calcula su total sumando el precio de cada item:
+
+```jsx
+const total = items.reduce((suma, item) => suma + item.precio, 0)
+```
 
 ---
 
-## 🎨 Diseño
+## ⚠️ Limitaciones intencionales
 
-La UI está construida con **Tailwind CSS** y componentes de **shadcn/ui**. Esto permite una interfaz visualmente cuidada y coherente sin distraer al estudiante de los conceptos de React. Los componentes de shadcn/ui se agregan según se necesiten en cada rama.
+- El carrito permite duplicados — agregar la misma galleta dos veces crea dos entradas. La lógica de cantidades se introduce en `05-reducers`.
+- Se usa el índice del array como `key` en el carrito porque puede haber items repetidos. Esto se corrige en `05-reducers` con IDs únicos por entrada.
+- El estado del carrito vive en `App` y se pasa hacia abajo como props. Al agregar más páginas en `02-router`, esto se convierte en un problema.
 
 ---
 
-## 💻 Entorno
+## 📁 Estructura relevante
 
-Todos los ejemplos están preparados para ejecutarse con Docker y Docker Compose.
+```
+src/
+├── App.jsx                  ← useState, agregarAlCarrito, layout principal
+├── data/
+│   └── cookies.js           ← array estático de galletas
+└── components/
+    ├── CookieCard.jsx        ← recibe cookie + onAgregar como props
+    └── Cart.jsx              ← recibe items como prop, calcula el total
+```
 
-Cada rama contiene su propio `Dockerfile` y `docker-compose.yml`. Para levantar el proyecto en cualquier rama basta con:
+---
+
+## 🚀 Cómo ejecutar
 
 ```bash
+cp docker-compose.example.yml docker-compose.yml
 docker compose up --build
 ```
 
-No es necesario tener Node instalado localmente. Cada rama construye sobre las dependencias de la anterior — Docker se encarga del entorno de forma consistente.
-
----
-
-## 📚 Ramas del repositorio
-
-**[01-intro](https://github.com/menene/cookiestore-react/tree/01-intro)**
-Catálogo estático y estado básico. Se construye la vista principal iterando un array de galletas y manejando un carrito de compras simple con `useState`.
-
-**[02-router](https://github.com/menene/cookiestore-react/tree/02-router)**
-Se introduce React Router v6. La tienda pasa a tener múltiples páginas, demostrando el problema de perder el estado del carrito al navegar y el infierno del prop drilling.
-
-**[03-context](https://github.com/menene/cookiestore-react/tree/03-context)**
-Se implementa Context API. Se extrae el estado del carrito a un `CartContext` global, resolviendo el problema de la rama anterior sin utilizar librerías de terceros.
-
-**[04-hooks](https://github.com/menene/cookiestore-react/tree/04-hooks)**
-Se simula el consumo de una API. Los datos pasan a un archivo JSON y se utiliza `useEffect` para cargarlos al montar el componente, junto con `useRef` para optimizar el buscador de galletas y un custom hook reutilizable.
-
-**[05-reducers](https://github.com/menene/cookiestore-react/tree/05-reducers)**
-Se refactoriza la lógica del carrito. Al crecer la complejidad (cantidades exactas, totales, eliminación específica), se reemplazan múltiples `useState` dispersos por un `useReducer` con acciones explícitas.
-
-**[06-forms](https://github.com/menene/cookiestore-react/tree/06-forms)**
-Se construye el flujo de Checkout. Se introduce React Hook Form y Zod para manejar un formulario complejo de dirección y pago, validando datos de manera estricta sin provocar renders en cada pulsación de tecla.
-
-**[07-performance](https://github.com/menene/cookiestore-react/tree/07-performance)**
-Se optimiza la aplicación. Se implementan técnicas de memoización (`React.memo`, `useMemo`, `useCallback`) y lazy loading con `React.lazy` y `Suspense` para evitar que todo el catálogo se vuelva a renderizar innecesariamente.
-
-**[08-zustand](https://github.com/menene/cookiestore-react/tree/08-zustand)**
-Se reemplaza Context API por Zustand. Se demuestra cómo una librería moderna de estado global reduce drásticamente el código repetitivo y mejora el rendimiento por defecto en aplicaciones que escalan.
+La aplicación estará disponible en `http://localhost:5173`.
