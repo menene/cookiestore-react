@@ -18,8 +18,8 @@ Comenzamos desde el nivel más bajo posible en React y vamos subiendo:
 * Ciclo de vida y peticiones de datos simuladas
 * Manejo de estado complejo con Reducers
 * Formularios robustos y validación
+* Testing con Vitest y React Testing Library
 * Optimización de rendimiento y renders
-* Estado global escalable con Zustand
 
 El diseño visual utiliza **Tailwind CSS** y **shadcn/ui** desde la primera rama. La interfaz es consistente, limpia y profesional a lo largo de todo el recorrido — el foco pedagógico está en React, no en el CSS.
 
@@ -84,8 +84,8 @@ Se refactoriza la lógica del carrito. Al crecer la complejidad (cantidades exac
 **[06-forms](https://github.com/menene/cookiestore-react/tree/06-forms)**
 Se construye el flujo de Checkout. Se introduce React Hook Form y Zod para manejar un formulario complejo de dirección y pago, validando datos de manera estricta sin provocar renders en cada pulsación de tecla.
 
-**[07-performance](https://github.com/menene/cookiestore-react/tree/07-performance)**
-Se optimiza la aplicación. Se implementan técnicas de memoización (`React.memo`, `useMemo`, `useCallback`) y lazy loading con `React.lazy` y `Suspense` para evitar que todo el catálogo se vuelva a renderizar innecesariamente.
+**[07-testing](https://github.com/menene/cookiestore-react/tree/07-testing)**
+Se introduce el testing en React. Se escriben pruebas unitarias e de integración con Vitest y React Testing Library, cubriendo componentes, hooks personalizados y flujos de usuario como agregar productos al carrito.
 
-**[08-zustand](https://github.com/menene/cookiestore-react/tree/08-zustand)**
-Se reemplaza Context API por Zustand. Se demuestra cómo una librería moderna de estado global reduce drásticamente el código repetitivo y mejora el rendimiento por defecto en aplicaciones que escalan.
+**[08-performance](https://github.com/menene/cookiestore-react/tree/08-performance)**
+Se optimiza la aplicación. Se implementan técnicas de memoización (`React.memo`, `useMemo`, `useCallback`) y lazy loading con `React.lazy` y `Suspense` para evitar que todo el catálogo se vuelva a renderizar innecesariamente.
