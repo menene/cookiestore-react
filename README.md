@@ -1,4 +1,4 @@
-# Rama 07-testing — Linting, Formateo y Tests
+# Rama 07-testing — Linting, Formateo, Tests y Storybook
 
 Esta rama construye directamente sobre el código de `06-forms`. No agrega features nuevas — agrega las herramientas que hacen que el código sea **mantenible, confiable y profesional**.
 
@@ -47,6 +47,21 @@ Formatea el código automáticamente con reglas fijas. No hay debate sobre comil
 ```bash
 npm run format        # formatea todos los archivos en src/
 ```
+
+### Storybook
+
+Entorno de desarrollo aislado para componentes UI. Permite desarrollar, documentar y probar visualmente cada componente sin levantar la aplicación completa. Cada "story" representa un estado específico del componente — con props distintos, con carrito lleno, con favorito activado, etc.
+
+```bash
+npm run storybook          # abre el explorador en http://localhost:6006
+npm run build-storybook    # genera versión estática exportable
+```
+
+**Por qué importa:** Storybook complementa Vitest. Vitest verifica que el comportamiento lógico es correcto; Storybook verifica que la apariencia visual también lo es. Es especialmente útil para:
+
+- Desarrollar componentes sin depender del estado real de la app
+- Documentar todos los estados posibles de un componente en un solo lugar
+- Detectar regresiones visuales antes de que lleguen al navegador
 
 ### Vitest + React Testing Library
 
@@ -178,6 +193,10 @@ export function renderWithProviders(ui, { cartValue = mockCartContext, route = "
 src/
 ├── reducers/
 │   └── cartReducer.js          ← NUEVO: reducer extraído para testear en aislamiento
+├── stories/
+│   ├── Button.stories.jsx      ← NUEVO: 8 stories del componente Button
+│   ├── CookieCard.stories.jsx  ← NUEVO: 5 stories con etiquetas y estado favorito
+│   └── Navbar.stories.jsx      ← NUEVO: 3 stories con distintos estados del carrito
 ├── tests/
 │   ├── setup.js                ← NUEVO: configura jest-dom matchers
 │   ├── utils.jsx               ← NUEVO: renderWithProviders + mockCartContext
@@ -185,6 +204,9 @@ src/
 │   ├── useDebounce.test.js     ← NUEVO: 5 tests con fake timers
 │   ├── CookieCard.test.jsx     ← NUEVO: 7 tests del componente
 │   └── Navbar.test.jsx         ← NUEVO: 7 tests de navegación y badge
+.storybook/
+│   ├── main.js                 ← NUEVO: config de Storybook (framework, addons, stories glob)
+│   └── preview.jsx             ← NUEVO: decorators globales (MemoryRouter + CartContext)
 eslint.config.js                ← NUEVO: ESLint v9 flat config
 .prettierrc                     ← NUEVO: config de Prettier
 .prettierignore                 ← NUEVO
@@ -222,6 +244,60 @@ package.json                    ← MODIFICADO: nuevas dependencias y scripts
 
 ---
 
+## Las stories explicadas
+
+### `Button.stories.jsx` — componente sin dependencias externas
+
+El `Button` es el candidato ideal para empezar: no necesita Router ni contexto. Las stories cubren todas las variantes (`default`, `destructive`, `outline`, `secondary`, `ghost`) y todos los tamaños (`sm`, `default`, `lg`), incluyendo el estado `disabled`. Los controles de Storybook permiten cambiar variant y size en tiempo real desde la UI.
+
+### `CookieCard.stories.jsx` — estados visuales por etiqueta
+
+Cada etiqueta (`Clasica`, `Especial`, `Indulgente`, `Fresca`) tiene estilos distintos — una story por etiqueta permite verificar visualmente que los colores del badge son correctos. La story `ConFavorito` sobreescribe el `CartContext` global para mostrar el botón de corazón en estado activo (relleno), sin necesidad de interactuar con la app real.
+
+### `Navbar.stories.jsx` — estados del badge del carrito
+
+Tres stories que verifican el comportamiento del badge:
+- `CarritoVacio`: el badge no aparece
+- `ConItems`: muestra el número exacto (3)
+- `BadgeLimitado`: muestra `9+` cuando hay más de 9 items en total
+
+Cada story sobreescribe el `CartContext` del decorator global con su propio valor de `carrito`.
+
+---
+
+## Decorators: el patrón clave de Storybook
+
+Los componentes de esta app dependen de `react-router-dom` y `CartContext`. Sin proveer estos contextos, todas las stories romperían. Storybook usa **decorators** para envolver las stories con los providers necesarios.
+
+```jsx
+// .storybook/preview.jsx — aplica a TODAS las stories
+decorators: [
+  (Story) => (
+    <MemoryRouter>
+      <CartContext.Provider value={mockCartContext}>
+        <Story />
+      </CartContext.Provider>
+    </MemoryRouter>
+  ),
+],
+```
+
+Para stories que necesitan un estado distinto (como `ConFavorito` o `BadgeLimitado`), se añade un decorator a nivel de story que envuelve con un `CartContext.Provider` diferente. Como los decorators se apilan de afuera hacia adentro, el decorator de la story queda más cerca del componente y su valor gana sobre el global.
+
+```jsx
+export const ConFavorito = {
+  decorators: [
+    (Story) => (
+      <CartContext.Provider value={{ ...baseContext, esFavorito: (id) => id === 1 }}>
+        <Story />
+      </CartContext.Provider>
+    ),
+  ],
+}
+```
+
+---
+
 ## Cómo ejecutar
 
 ```bash
@@ -233,14 +309,11 @@ docker compose up --build
 La aplicación estará disponible en `http://localhost:5173`.
 
 ```bash
+# Localmente (Storybook requiere puerto local, no corre en Docker):
+npm run storybook     # explorador de componentes en http://localhost:6006
+
 # Dentro del contenedor o localmente:
 npm run test          # tests en watch mode
 npm run lint          # revisa el código
 npm run format        # formatea el código
 ```
-
----
-
-## Proxima rama: `08-performance`
-
-`React.memo`, `useMemo`, `useCallback`, `React.lazy` + `Suspense`. Cuándo optimizar y cuándo no optimizar.

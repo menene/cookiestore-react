@@ -12,7 +12,9 @@
     "format": "prettier --write src",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "storybook": "storybook dev -p 6006 --no-open",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -47,6 +49,12 @@
     "tailwindcss": "^3.4.15",
     "vite": "^5.4.10",
     "vite-plugin-eslint2": "^4.4.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "@storybook/addon-essentials": "^8.4.0",
+    "@storybook/blocks": "^8.4.0",
+    "@storybook/react": "^8.4.0",
+    "@storybook/react-vite": "^8.4.0",
+    "@storybook/test": "^8.4.0",
+    "storybook": "^8.4.0"
   }
 }
