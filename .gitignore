@@ -39,3 +39,6 @@ Thumbs.db
 
 # Vite
 *.local
+
+# Lint/tool caches
+.eslintcache
